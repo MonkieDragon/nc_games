@@ -3,7 +3,6 @@ const format = require("pg-format");
 
 const seed = (data) => {
 	const { categoryData, commentData, reviewData, userData } = data;
-	console.log("in seed");
 	// 1. create tables
 	return (
 		db
