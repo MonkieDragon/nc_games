@@ -361,7 +361,7 @@ describe("GET /api/reviews/:review_id/comments", () => {
 	});
 });
 
-describe.only("POST /api/reviews/:review_id/comments", () => {
+describe("POST /api/reviews/:review_id/comments", () => {
 	test("status 200: if given a valid request object, responds newly posted comment", () => {
 		const newComment = { username: "mallionaire", body: "this game is dope" };
 		return request(app)
@@ -452,6 +452,44 @@ describe.only("POST /api/reviews/:review_id/comments", () => {
 				expect(response.body).toEqual({
 					msg: "Bad Request",
 				});
+			});
+	});
+});
+
+describe.only("DELETE /api/comments/:comment_id", () => {
+	test("status 204: if given a valid comment_id, responds with status code", () => {
+		return request(app).delete("/api/comments/1").expect(204);
+	});
+
+	test("status 200: if successfully deleted, table will be one row shorter", () => {
+		return request(app)
+			.delete("/api/comments/1")
+			.then(() => {
+				return request(app)
+					.get("/api/reviews/2/comments")
+					.expect(200)
+					.then(({ body: { comments } }) => {
+						expect(comments).toBeInstanceOf(Array);
+						expect(comments).toHaveLength(2);
+					});
+			});
+	});
+
+	test("status 404: if comment_id doesnt exist, returns error message", () => {
+		return request(app)
+			.delete("/api/comments/99999")
+			.expect(404)
+			.then(({ body: { msg } }) => {
+				expect(msg).toBe("comment not found");
+			});
+	});
+
+	test("status 400: if comment_id is invalid data type, returns error message", () => {
+		return request(app)
+			.delete("/api/comments/badger")
+			.expect(400)
+			.then(({ body: { msg } }) => {
+				expect(msg).toBe("Bad request"); //correct message?
 			});
 	});
 });

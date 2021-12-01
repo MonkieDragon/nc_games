@@ -36,3 +36,12 @@ exports.insertCommentsbyReviewId = (review_id, reqBody) => {
 		)
 		.then(({ rows }) => rows[0]);
 };
+
+exports.removeComment = (comment_id) => {
+	console.log("in removeComment");
+	return db.query(
+		`DELETE FROM comments
+	WHERE comment_id = $1`,
+		[comment_id]
+	);
+};
