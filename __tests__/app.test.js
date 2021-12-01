@@ -192,10 +192,10 @@ describe("GET /api/reviews", () => {
 
 	test("status 200: reviews are sorted by client query in descending order by default", () => {
 		return request(app)
-			.get("/api/reviews?sort_by=title")
+			.get("/api/reviews?sort_by=designer")
 			.expect(200)
 			.then((response) => {
-				expect(response.body.reviews).toBeSortedBy("title", {
+				expect(response.body.reviews).toBeSortedBy("designer", {
 					descending: true,
 				});
 			});
@@ -206,7 +206,9 @@ describe("GET /api/reviews", () => {
 			.get("/api/reviews?order=asc")
 			.expect(200)
 			.then((response) => {
-				expect(response.body.reviews).toBeSortedBy("created_at");
+				expect(response.body.reviews).toBeSortedBy("created_at", {
+					descending: false,
+				});
 			});
 	});
 
@@ -291,18 +293,165 @@ describe("GET /api/reviews", () => {
 	test("status 404: if invalid category, returns error message", () => {
 		return request(app)
 			.get("/api/reviews?category=badger")
-			.expect(400)
+			.expect(404)
 			.then((response) => {
-				expect(response.body.msg).toBe("Bad request");
+				expect(response.body.msg).toBe("category not found");
 			});
 	});
 
-	test("status 404: if valid category but no reviews associated with it, returns error message", () => {
+	test("status 200: if valid category but no reviews associated with it, returns empty array", () => {
 		return request(app)
 			.get("/api/reviews?category=children's games")
-			.expect(404)
+			.expect(200)
 			.then((response) => {
-				expect(response.body.msg).toBe("No reviews found");
+				expect(response.body.reviews).toBeInstanceOf(Array);
+				expect(response.body.reviews).toHaveLength(0);
+			});
+	});
+});
+
+describe("GET /api/reviews/:review_id/comments", () => {
+	test("status 200: responds with array of comments", () => {
+		return request(app)
+			.get("/api/reviews/2/comments")
+			.expect(200)
+			.then(({ body: { comments } }) => {
+				expect(comments).toBeInstanceOf(Array);
+				expect(comments).toHaveLength(3);
+				comments.forEach((comment) => {
+					expect(comment).toEqual(
+						expect.objectContaining({
+							comment_id: expect.any(Number),
+							votes: expect.any(Number),
+							created_at: expect.any(String),
+							author: expect.any(String),
+							body: expect.any(String),
+						})
+					);
+				});
+			});
+	});
+
+	test("status 200: responds with an empty array for reviews with no comments", () => {
+		return request(app)
+			.get("/api/reviews/1/comments")
+			.expect(200)
+			.then(({ body: { comments } }) => {
+				expect(comments).toBeInstanceOf(Array);
+				expect(comments).toHaveLength(0);
+			});
+	});
+
+	test("status 404: if review_id doesnt exist, returns error message", () => {
+		return request(app)
+			.get("/api/reviews/9999/comments")
+			.expect(404)
+			.then(({ body: { msg } }) => {
+				expect(msg).toBe("review not found");
+			});
+	});
+
+	test("status 400: if review_id is invalid data type, returns error message", () => {
+		return request(app)
+			.get("/api/reviews/badger/comments")
+			.expect(400)
+			.then(({ body: { msg } }) => {
+				expect(msg).toBe("Bad request"); //correct message?
+			});
+	});
+});
+
+describe.only("POST /api/reviews/:review_id/comments", () => {
+	test("status 200: if given a valid request object, responds newly posted comment", () => {
+		const newComment = { username: "mallionaire", body: "this game is dope" };
+		return request(app)
+			.post("/api/reviews/2/comments")
+			.send(newComment)
+			.expect(201)
+			.then((response) => {
+				expect(response.body.comment).toEqual(
+					expect.objectContaining({
+						comment_id: 7,
+						votes: 0,
+						created_at: expect.any(String),
+						author: "mallionaire",
+						body: "this game is dope",
+					})
+				);
+			});
+	});
+
+	test("status 404: if review_id doesnt exist, returns error message", () => {
+		const newComment = { username: "mallionaire", body: "this game is dope" };
+		return request(app)
+			.post("/api/reviews/9999/comments")
+			.send(newComment)
+			.expect(404)
+			.then(({ body: { msg } }) => {
+				expect(msg).toBe("review not found");
+			});
+	});
+
+	test("status 400: if review_id is invalid data type, returns error message", () => {
+		const newComment = { username: "mallionaire", body: "this game is dope" };
+		return request(app)
+			.post("/api/reviews/badger/comments")
+			.send(newComment)
+			.expect(400)
+			.then(({ body: { msg } }) => {
+				expect(msg).toBe("Bad Request"); //correct message?
+			});
+	});
+
+	test("status 400: returns error if malformed body", () => {
+		const newComment = { user: "mallionaire", body: "this game is dope" };
+		return request(app)
+			.post("/api/reviews/2/comments")
+			.send(newComment)
+			.expect(400)
+			.then((response) => {
+				expect(response.body).toEqual({
+					msg: "Bad Request",
+				});
+			});
+	});
+
+	test("status 400: returns error if body missing field", () => {
+		const newComment = { user: "mallionaire" };
+		return request(app)
+			.post("/api/reviews/2/comments")
+			.send(newComment)
+			.expect(400)
+			.then((response) => {
+				expect(response.body).toEqual({
+					msg: "Bad Request",
+				});
+			});
+	});
+
+	test("status 400: returns error if username is wrong data type", () => {
+		const newComment = { username: 999, body: "this game is dope" };
+		return request(app)
+			.post("/api/reviews/2/comments")
+			.send(newComment)
+			.expect(400)
+			.then((response) => {
+				expect(response.body).toEqual({
+					msg: "Bad Request",
+				});
+			});
+	});
+
+	test("status 400: returns error if username is doesnt exist", () => {
+		const newComment = { user: "badger", body: 999 };
+		return request(app)
+			.post("/api/reviews/2/comments")
+			.send(newComment)
+			.expect(400)
+			.then((response) => {
+				expect(response.body).toEqual({
+					msg: "Bad Request",
+				});
 			});
 	});
 });

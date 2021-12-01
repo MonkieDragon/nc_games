@@ -54,3 +54,62 @@ exports.updateReview = (review_id, request) => {
 			return updated_review;
 		});
 };
+
+exports.selectReviews = (
+	sort_by = "created_at",
+	order = "DESC",
+	category,
+	queryObj
+) => {
+	//check all queries are spelt correctly
+	const queryKeys = Object.keys(queryObj);
+	const querySpellCheck = true;
+	queryKeys.forEach((queryKey) => {
+		if (!["sort_by", "order", "category"].includes(queryKey)) {
+			querySpellCheck = false;
+		}
+	});
+
+	if (queryKeys.length > 0) {
+		if (
+			![
+				"owner",
+				"designer",
+				"title",
+				"review_id",
+				"category",
+				"review_img_url",
+				"created_at",
+				"votes",
+				"comment_count",
+			].includes(sort_by) ||
+			!["ASC", "DESC"].includes(order.toUpperCase()) ||
+			!querySpellCheck
+		) {
+			return Promise.reject({ status: 400, msg: "Invalid query" });
+		}
+	}
+
+	let catQueryStr = "";
+	if (category) {
+		catQueryStr = ` WHERE reviews.category = '${category}' `;
+	}
+
+	return db
+		.query(
+			`SELECT owner, title, reviews.review_id, review_body,
+         designer, review_img_url, category,
+          reviews.created_at, reviews.votes,
+           COUNT(comment_id)::int AS comment_count
+            FROM reviews
+             LEFT JOIN comments
+              ON reviews.review_id = comments.review_id
+               ${catQueryStr}
+                GROUP BY reviews.review_id
+                ORDER BY ${sort_by} ${order};`
+		)
+
+		.then((result) => {
+			return result.rows;
+		});
+};
