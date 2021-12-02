@@ -2,7 +2,7 @@ const db = require("../db/connection");
 
 exports.selectReview = (review_id) => {
 	if (review_id === undefined) {
-		return Promise.reject({ status: 400, msg: "Bad Request" });
+		return Promise.reject({ status: 400, msg: "Bad request" });
 	}
 
 	return db
@@ -50,8 +50,7 @@ exports.updateReview = (review_id, request) => {
 			[inc_votes, review_id]
 		)
 		.then((result) => {
-			const updated_review = result.rows[0];
-			return updated_review;
+			return result.rows[0];
 		});
 };
 
@@ -92,7 +91,8 @@ exports.selectReviews = (
 
 	let catQueryStr = "";
 	if (category) {
-		catQueryStr = ` WHERE reviews.category = '${category}' `;
+		const formattedCat = category.replace("'", "''"); //escapes any apostrophes
+		catQueryStr = ` WHERE reviews.category = '${formattedCat}' `;
 	}
 
 	return db
@@ -104,8 +104,8 @@ exports.selectReviews = (
             FROM reviews
              LEFT JOIN comments
               ON reviews.review_id = comments.review_id
-               ${catQueryStr}
-                GROUP BY reviews.review_id
+			  ${catQueryStr}
+			  GROUP BY reviews.review_id
                 ORDER BY ${sort_by} ${order};`
 		)
 

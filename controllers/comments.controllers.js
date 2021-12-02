@@ -2,6 +2,7 @@ const {
 	selectCommentsbyReviewId,
 	insertCommentsbyReviewId,
 	removeComment,
+	updateComment,
 } = require("../models/comments.models");
 const { reviewExists, commentExists } = require("../models/utils.models");
 
@@ -35,12 +36,22 @@ exports.postCommentsbyReviewId = (req, res, next) => {
 };
 
 exports.deleteComment = (req, res, next) => {
-	console.log("in deleteComment");
 	const { comment_id } = req.params;
 	Promise.all([commentExists(comment_id), removeComment(comment_id)])
 
 		.then(() => {
 			res.status(204).send();
+		})
+		.catch((err) => {
+			next(err);
+		});
+};
+
+exports.patchComment = (req, res, next) => {
+	const { comment_id } = req.params;
+	Promise.all([commentExists(comment_id), updateComment(comment_id, req.body)])
+		.then(([, comment]) => {
+			res.status(200).send({ comment: comment });
 		})
 		.catch((err) => {
 			next(err);

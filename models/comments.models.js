@@ -23,7 +23,7 @@ exports.insertCommentsbyReviewId = (review_id, reqBody) => {
 
 	//check for malformed body
 	if ([username, body].includes(undefined)) {
-		return Promise.reject({ status: 400, msg: "Bad Request" });
+		return Promise.reject({ status: 400, msg: "Bad request" });
 	}
 
 	return db
@@ -38,10 +38,31 @@ exports.insertCommentsbyReviewId = (review_id, reqBody) => {
 };
 
 exports.removeComment = (comment_id) => {
-	console.log("in removeComment");
 	return db.query(
 		`DELETE FROM comments
 	WHERE comment_id = $1`,
 		[comment_id]
 	);
+};
+
+exports.updateComment = (comment_id, request) => {
+	const { inc_votes } = request;
+	if (!inc_votes) {
+		return Promise.reject({ status: 400, msg: "Bad request" });
+	}
+	if (Object.keys(request).length > 1) {
+		return Promise.reject({ status: 400, msg: "Too many request properties" });
+	}
+	return db
+		.query(
+			`
+    UPDATE comments
+    SET votes = votes + $1
+    WHERE comment_id = $2
+    RETURNING *;`,
+			[inc_votes, comment_id]
+		)
+		.then((result) => {
+			return result.rows[0];
+		});
 };

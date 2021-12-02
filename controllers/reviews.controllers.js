@@ -1,4 +1,4 @@
-const { categoryExists } = require("../models/categories.models");
+const { categoryExists } = require("../models/utils.models");
 const {
 	selectReview,
 	updateReview,
@@ -29,8 +29,6 @@ exports.patchReview = (req, res, next) => {
 
 exports.getReviews = (req, res, next) => {
 	const { sort_by, order, category } = req.query;
-	//console.log("sort_by: " + sort_by, "order: " + order, "category " + category);
-
 	Promise.all([
 		categoryExists(category),
 		selectReviews(sort_by, order, category, req.query),

@@ -399,7 +399,7 @@ describe("POST /api/reviews/:review_id/comments", () => {
 			.send(newComment)
 			.expect(400)
 			.then(({ body: { msg } }) => {
-				expect(msg).toBe("Bad Request"); //correct message?
+				expect(msg).toBe("Bad request"); //correct message?
 			});
 	});
 
@@ -411,7 +411,7 @@ describe("POST /api/reviews/:review_id/comments", () => {
 			.expect(400)
 			.then((response) => {
 				expect(response.body).toEqual({
-					msg: "Bad Request",
+					msg: "Bad request",
 				});
 			});
 	});
@@ -424,7 +424,7 @@ describe("POST /api/reviews/:review_id/comments", () => {
 			.expect(400)
 			.then((response) => {
 				expect(response.body).toEqual({
-					msg: "Bad Request",
+					msg: "Bad request",
 				});
 			});
 	});
@@ -437,12 +437,12 @@ describe("POST /api/reviews/:review_id/comments", () => {
 			.expect(400)
 			.then((response) => {
 				expect(response.body).toEqual({
-					msg: "Bad Request",
+					msg: "Bad request",
 				});
 			});
 	});
 
-	test("status 400: returns error if username is doesnt exist", () => {
+	test("status 400: returns error if username doesnt exist", () => {
 		const newComment = { user: "badger", body: 999 };
 		return request(app)
 			.post("/api/reviews/2/comments")
@@ -450,13 +450,13 @@ describe("POST /api/reviews/:review_id/comments", () => {
 			.expect(400)
 			.then((response) => {
 				expect(response.body).toEqual({
-					msg: "Bad Request",
+					msg: "Bad request",
 				});
 			});
 	});
 });
 
-describe.only("DELETE /api/comments/:comment_id", () => {
+describe("DELETE /api/comments/:comment_id", () => {
 	test("status 204: if given a valid comment_id, responds with status code", () => {
 		return request(app).delete("/api/comments/1").expect(204);
 	});
@@ -490,6 +490,137 @@ describe.only("DELETE /api/comments/:comment_id", () => {
 			.expect(400)
 			.then(({ body: { msg } }) => {
 				expect(msg).toBe("Bad request"); //correct message?
+			});
+	});
+});
+
+describe("GET /api", () => {
+	test("status 200: responds with a JSON file describing api endpoints", () => {
+		return request(app)
+			.get("/api")
+			.expect(200)
+			.then((response) => {
+				expect(response.body).toEqual(
+					expect.objectContaining({
+						api: "description",
+					})
+				);
+			});
+	});
+});
+
+describe("GET /api/users", () => {
+	test("status 200: returns an array of objects, each with a username property", () => {
+		return request(app)
+			.get("/api/users")
+			.expect(200)
+			.then(({ body: { users } }) => {
+				expect(users).toBeInstanceOf(Array);
+				expect(users).toHaveLength(4);
+				users.forEach((user) => {
+					expect(user).toEqual(
+						expect.objectContaining({
+							username: expect.any(String),
+						})
+					);
+				});
+			});
+	});
+});
+
+describe("GET /api/users/:username", () => {
+	test("status 200: if given valid username, responds with a user object", () => {
+		return request(app)
+			.get("/api/users/mallionaire")
+			.expect(200)
+			.then(({ body: { user } }) => {
+				expect(user).toEqual(
+					expect.objectContaining({
+						username: "mallionaire",
+						name: "haz",
+						avatar_url:
+							"https://www.healthytherapies.com/wp-content/uploads/2016/06/Lime3.jpg",
+					})
+				);
+			});
+	});
+
+	test("status 404: if comment_id doesnt exist, returns error message", () => {
+		return request(app)
+			.get("/api/users/badger")
+			.expect(404)
+			.then(({ body: { msg } }) => {
+				expect(msg).toBe("user not found");
+			});
+	});
+});
+
+describe("PATCH /api/comments/:comment_id", () => {
+	test("status: 200, responds with status 200 and updated comment", () => {
+		const newVotes = {
+			inc_votes: -5,
+		};
+		return request(app)
+			.patch("/api/comments/1")
+			.send(newVotes)
+			.expect(200)
+			.then((response) => {
+				expect(response.body.comment).toEqual(
+					expect.objectContaining({
+						comment_id: 1,
+						body: "I loved this game too!",
+						votes: 11,
+						author: "bainesface",
+						review_id: 2,
+						created_at: expect.any(String),
+					})
+				);
+			});
+	});
+
+	test("status: 400, responds with bad request message if no inc_votes on body", () => {
+		const newVotes = {
+			pinc_votes: 5,
+		};
+		return request(app)
+			.patch("/api/comments/1")
+			.send(newVotes)
+			.expect(400)
+			.then((response) => {
+				expect(response.body).toEqual({
+					msg: "Bad request",
+				});
+			});
+	});
+
+	test("status: 400, responds with bad request message if inc_votes is invalid", () => {
+		const newVotes = {
+			inc_votes: "badger",
+		};
+		return request(app)
+			.patch("/api/comments/1")
+			.send(newVotes)
+			.expect(400)
+			.then((response) => {
+				expect(response.body).toEqual({
+					msg: "Bad request",
+				});
+			});
+	});
+
+	test("status: 400, responds with bad request message if properies in addition to inc_votes on request", () => {
+		const newVotes = {
+			inc_votes: "1",
+			name: "Billy Badger",
+		};
+		return request(app)
+			.patch("/api/comments/1")
+			.send(newVotes)
+			.expect(400)
+			.then((response) => {
+				expect(response.body).toEqual({
+					msg: "Too many request properties",
+				});
 			});
 	});
 });
