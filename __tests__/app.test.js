@@ -423,7 +423,7 @@ describe("GET /api/reviews/:review_id/comments", () => {
 			.get("/api/reviews/9999/comments")
 			.expect(404)
 			.then(({ body: { msg } }) => {
-				expect(msg).toBe("review not found");
+				expect(msg).toBe("Not found");
 			});
 	});
 
