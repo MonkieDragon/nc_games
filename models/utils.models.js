@@ -4,6 +4,7 @@ exports.categoryExists = (category) => {
 	if (!category) {
 		return;
 	}
+
 	return db
 		.query(`SELECT * FROM categories WHERE slug = $1;`, [category])
 		.then(({ rows }) => {
@@ -43,13 +44,16 @@ exports.commentExists = (comment_id) => {
 };
 
 exports.userExists = (username) => {
+	if (!username) {
+		return;
+	}
 	return db
 		.query(`SELECT * FROM users WHERE username = $1;`, [username])
 		.then(({ rows }) => {
 			if (rows.length === 0) {
 				return Promise.reject({
 					status: 404,
-					msg: `user not found`,
+					msg: `Not found`,
 				});
 			}
 		});

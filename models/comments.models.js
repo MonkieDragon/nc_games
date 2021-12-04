@@ -1,6 +1,6 @@
 const db = require("../db/connection");
 
-exports.selectCommentsbyReviewId = (review_id) => {
+exports.selectCommentsbyReviewId = (review_id, limit = 10, p = 0) => {
 	return db
 		.query(
 			`SELECT 
@@ -10,8 +10,9 @@ exports.selectCommentsbyReviewId = (review_id) => {
     author, 
     body
     FROM comments
-    WHERE review_id = $1;`,
-			[review_id]
+    WHERE review_id = $1
+	LIMIT $2 OFFSET $3;`,
+			[review_id, limit, p]
 		)
 		.then((result) => {
 			return result.rows;
@@ -46,10 +47,7 @@ exports.removeComment = (comment_id) => {
 };
 
 exports.updateComment = (comment_id, request) => {
-	const { inc_votes } = request;
-	if (!inc_votes) {
-		return Promise.reject({ status: 400, msg: "Bad request" });
-	}
+	const { inc_votes = 0 } = request;
 	if (Object.keys(request).length > 1) {
 		return Promise.reject({ status: 400, msg: "Too many request properties" });
 	}

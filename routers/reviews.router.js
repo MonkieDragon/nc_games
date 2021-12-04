@@ -12,9 +12,11 @@ const {
 const reviewsRouter = express.Router();
 
 reviewsRouter.get("/", getReviews);
-reviewsRouter.get("/:review_id", getReview);
-reviewsRouter.patch("/:review_id", patchReview);
-reviewsRouter.get("/:review_id/comments", getCommentsbyReviewId);
-reviewsRouter.post("/:review_id/comments", postCommentsbyReviewId);
+
+reviewsRouter.route("/:review_id").get(getReview).patch(patchReview);
+reviewsRouter
+	.route("/:review_id/comments")
+	.get(getCommentsbyReviewId)
+	.post(postCommentsbyReviewId);
 
 module.exports = reviewsRouter;

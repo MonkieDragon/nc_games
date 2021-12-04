@@ -62,7 +62,7 @@ describe("GET /api/reviews/:review_id", () => {
 			.expect(400)
 			.then((response) => {
 				expect(response.body).toEqual({
-					msg: "Bad request",
+					msg: "Invalid input",
 				});
 			});
 	});
@@ -105,18 +105,28 @@ describe("PATCH /api/reviews/:review_id", () => {
 			});
 	});
 
-	test("status: 400, responds with bad request message if no inc_votes on body", () => {
+	test("status: 200, responds with unchanged object if no inc_votes on body", () => {
 		const newVotes = {
 			pinc_votes: 0,
 		};
 		return request(app)
 			.patch("/api/reviews/1")
 			.send(newVotes)
-			.expect(400)
+			.expect(200)
 			.then((response) => {
-				expect(response.body).toEqual({
-					msg: "Bad request",
-				});
+				expect(response.body.review).toEqual(
+					expect.objectContaining({
+						owner: "mallionaire",
+						title: "Agricola",
+						review_id: 1,
+						review_body: "Farmyard fun!",
+						designer: "Uwe Rosenberg",
+						review_img_url: expect.any(String),
+						category: "euro game",
+						created_at: expect.any(String),
+						votes: 1,
+					})
+				);
 			});
 	});
 
@@ -130,7 +140,7 @@ describe("PATCH /api/reviews/:review_id", () => {
 			.expect(400)
 			.then((response) => {
 				expect(response.body).toEqual({
-					msg: "Bad request",
+					msg: "Invalid input",
 				});
 			});
 	});
@@ -159,7 +169,7 @@ describe("GET /api/reviews", () => {
 			.expect(200)
 			.then((response) => {
 				expect(response.body.reviews).toBeInstanceOf(Array);
-				expect(response.body.reviews).toHaveLength(13);
+				expect(response.body.reviews).toHaveLength(10);
 				response.body.reviews.forEach((review) => {
 					expect(review).toEqual(
 						expect.objectContaining({
@@ -234,7 +244,7 @@ describe("GET /api/reviews", () => {
 
 	test("status 200: client queries can include spaces", () => {
 		return request(app)
-			.get("/api/reviews?category=social deduction") ///how to deal with spaces??
+			.get("/api/reviews?category=social deduction&limit=20") ///how to deal with spaces??
 			.expect(200)
 			.then((response) => {
 				expect(response.body.reviews).toBeInstanceOf(Array);
@@ -260,13 +270,69 @@ describe("GET /api/reviews", () => {
 
 	test("status 200: reviews are ordered AND sorted by AND filtered by client queries", () => {
 		return request(app)
-			.get("/api/reviews?sort_by=votes&order=asc&category=social deduction")
+			.get(
+				"/api/reviews?sort_by=votes&order=asc&category=social deduction&limit=20"
+			)
 			.expect(200)
 			.then((response) => {
 				expect(response.body.reviews).toBeSortedBy("votes");
 				expect(response.body.reviews).toHaveLength(11);
 				response.body.reviews.forEach((review) => {
 					expect(review.category).toBe("social deduction");
+				});
+			});
+	});
+
+	test("status 200: returns only the amount of reivews set by limit query, or less", () => {
+		return request(app)
+			.get("/api/reviews?limit=5")
+			.expect(200)
+			.then((response) => {
+				expect(response.body.reviews).toHaveLength(5);
+			});
+	});
+
+	test("status 200: returns same result if set p set to default of 0", () => {
+		return request(app)
+			.get("/api/reviews?limit=3")
+			.expect(200)
+			.then((response) => {
+				return request(app)
+					.get("/api/reviews?limit=3&p=0")
+					.expect(200)
+					.then((response2) => {
+						expect(response2.body.reviews).toEqual(response.body.reviews);
+					});
+			});
+	});
+
+	test("status 200: returns different result if set p to higher than default", () => {
+		return request(app)
+			.get("/api/reviews?limit=2")
+			.expect(200)
+			.then((response) => {
+				return request(app)
+					.get("/api/reviews?limit=2&p=1")
+					.expect(200)
+					.then((response2) => {
+						expect(response2.body.reviews).not.toEqual(response.body.reviews);
+					});
+			});
+	});
+
+	test("status 200: all results have a total_count property", () => {
+		return request(app)
+			.get("/api/reviews?limit=3")
+			.expect(200)
+			.then((response) => {
+				expect(response.body.reviews).toBeInstanceOf(Array);
+				expect(response.body.reviews).toHaveLength(3);
+				response.body.reviews.forEach((review) => {
+					expect(review).toEqual(
+						expect.objectContaining({
+							total_count: expect.any(Number),
+						})
+					);
 				});
 			});
 	});
@@ -296,6 +362,16 @@ describe("GET /api/reviews", () => {
 			.expect(404)
 			.then((response) => {
 				expect(response.body.msg).toBe("category not found");
+			});
+	});
+
+	test("status 200: works with categories with spaces", () => {
+		return request(app)
+			.get("/api/reviews?category=euro game")
+			.expect(200)
+			.then((response) => {
+				expect(response.body.reviews).toBeInstanceOf(Array);
+				expect(response.body.reviews).toHaveLength(1);
 			});
 	});
 
@@ -356,9 +432,48 @@ describe("GET /api/reviews/:review_id/comments", () => {
 			.get("/api/reviews/badger/comments")
 			.expect(400)
 			.then(({ body: { msg } }) => {
-				expect(msg).toBe("Bad request"); //correct message?
+				expect(msg).toBe("Invalid input"); //correct message?
 			});
 	});
+
+	test("status 200: returns only the amount of reivews set by limit query, or less", () => {
+		return request(app)
+			.get("/api/reviews/2/comments?limit=2")
+			.expect(200)
+			.then((response) => {
+				expect(response.body.comments).toHaveLength(2);
+			});
+	});
+
+	test("status 200: returns same result if set p set to default of 0", () => {
+		return request(app)
+			.get("/api/reviews/2/comments?limit=2")
+			.expect(200)
+			.then((response) => {
+				return request(app)
+					.get("/api/reviews/2/comments?limit=2&p=0")
+					.expect(200)
+					.then((response2) => {
+						expect(response2.body.comments).toEqual(response.body.comments);
+					});
+			});
+	});
+
+	test("status 200: returns different result if set p to higher than default", () => {
+		return request(app)
+			.get("/api/reviews/2/comments?limit=1")
+			.expect(200)
+			.then((response) => {
+				return request(app)
+					.get("/api/reviews/2/comments?limit=1&p=2")
+					.expect(200)
+					.then((response2) => {
+						expect(response2.body.comments).not.toEqual(response.body.comments);
+					});
+			});
+	});
+
+	//////
 });
 
 describe("POST /api/reviews/:review_id/comments", () => {
@@ -399,7 +514,7 @@ describe("POST /api/reviews/:review_id/comments", () => {
 			.send(newComment)
 			.expect(400)
 			.then(({ body: { msg } }) => {
-				expect(msg).toBe("Bad request"); //correct message?
+				expect(msg).toBe("Invalid input");
 			});
 	});
 
@@ -417,7 +532,7 @@ describe("POST /api/reviews/:review_id/comments", () => {
 	});
 
 	test("status 400: returns error if body missing field", () => {
-		const newComment = { user: "mallionaire" };
+		const newComment = { username: "mallionaire" };
 		return request(app)
 			.post("/api/reviews/2/comments")
 			.send(newComment)
@@ -429,28 +544,15 @@ describe("POST /api/reviews/:review_id/comments", () => {
 			});
 	});
 
-	test("status 400: returns error if username is wrong data type", () => {
-		const newComment = { username: 999, body: "this game is dope" };
+	test("status 404: returns error if username doesnt exist", () => {
+		const newComment = { username: "badger", body: "this game is dope" };
 		return request(app)
 			.post("/api/reviews/2/comments")
 			.send(newComment)
-			.expect(400)
+			.expect(404)
 			.then((response) => {
 				expect(response.body).toEqual({
-					msg: "Bad request",
-				});
-			});
-	});
-
-	test("status 400: returns error if username doesnt exist", () => {
-		const newComment = { user: "badger", body: 999 };
-		return request(app)
-			.post("/api/reviews/2/comments")
-			.send(newComment)
-			.expect(400)
-			.then((response) => {
-				expect(response.body).toEqual({
-					msg: "Bad request",
+					msg: "Not found",
 				});
 			});
 	});
@@ -489,7 +591,7 @@ describe("DELETE /api/comments/:comment_id", () => {
 			.delete("/api/comments/badger")
 			.expect(400)
 			.then(({ body: { msg } }) => {
-				expect(msg).toBe("Bad request"); //correct message?
+				expect(msg).toBe("Invalid input"); //correct message?
 			});
 	});
 });
@@ -502,7 +604,7 @@ describe("GET /api", () => {
 			.then((response) => {
 				expect(response.body).toEqual(
 					expect.objectContaining({
-						api: "description",
+						endpoints: expect.any(Object),
 					})
 				);
 			});
@@ -550,7 +652,7 @@ describe("GET /api/users/:username", () => {
 			.get("/api/users/badger")
 			.expect(404)
 			.then(({ body: { msg } }) => {
-				expect(msg).toBe("user not found");
+				expect(msg).toBe("Not found");
 			});
 	});
 });
@@ -578,18 +680,25 @@ describe("PATCH /api/comments/:comment_id", () => {
 			});
 	});
 
-	test("status: 400, responds with bad request message if no inc_votes on body", () => {
+	test("status: 400, responds with unchanged object if no inc_votes on body", () => {
 		const newVotes = {
-			pinc_votes: 5,
+			pinc_votes: -5,
 		};
 		return request(app)
 			.patch("/api/comments/1")
 			.send(newVotes)
-			.expect(400)
+			.expect(200)
 			.then((response) => {
-				expect(response.body).toEqual({
-					msg: "Bad request",
-				});
+				expect(response.body.comment).toEqual(
+					expect.objectContaining({
+						comment_id: 1,
+						body: "I loved this game too!",
+						votes: 16,
+						author: "bainesface",
+						review_id: 2,
+						created_at: expect.any(String),
+					})
+				);
 			});
 	});
 
@@ -603,7 +712,7 @@ describe("PATCH /api/comments/:comment_id", () => {
 			.expect(400)
 			.then((response) => {
 				expect(response.body).toEqual({
-					msg: "Bad request",
+					msg: "Invalid input",
 				});
 			});
 	});

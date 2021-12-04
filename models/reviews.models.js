@@ -33,10 +33,10 @@ exports.selectReview = (review_id) => {
 };
 
 exports.updateReview = (review_id, request) => {
-	const { inc_votes } = request;
-	if (!inc_votes) {
-		return Promise.reject({ status: 400, msg: "Bad request" });
-	}
+	const { inc_votes = 0 } = request;
+	// if (!inc_votes) {
+	// 	return Promise.reject({ status: 400, msg: "Bad request" });
+	// }
 	if (Object.keys(request).length > 1) {
 		return Promise.reject({ status: 400, msg: "Too many request properties" });
 	}
@@ -58,18 +58,21 @@ exports.selectReviews = (
 	sort_by = "created_at",
 	order = "DESC",
 	category,
+	limit = 10,
+	p = 0,
 	queryObj
 ) => {
 	//check all queries are spelt correctly
 	const queryKeys = Object.keys(queryObj);
 	const querySpellCheck = true;
-	queryKeys.forEach((queryKey) => {
-		if (!["sort_by", "order", "category"].includes(queryKey)) {
-			querySpellCheck = false;
-		}
-	});
 
 	if (queryKeys.length > 0) {
+		queryKeys.forEach((queryKey) => {
+			if (!["sort_by", "order", "category", "limit", "p"].includes(queryKey)) {
+				querySpellCheck = false;
+			}
+		});
+
 		if (
 			![
 				"owner",
@@ -90,25 +93,28 @@ exports.selectReviews = (
 	}
 
 	let catQueryStr = "";
+	const queryArr = [limit, p];
 	if (category) {
-		const formattedCat = category.replace("'", "''"); //escapes any apostrophes
-		catQueryStr = ` WHERE reviews.category = '${formattedCat}' `;
+		catQueryStr = ` WHERE reviews.category = $3`;
+		queryArr.push(category);
 	}
 
 	return db
 		.query(
 			`SELECT owner, title, reviews.review_id, review_body,
-         designer, review_img_url, category,
-          reviews.created_at, reviews.votes,
-           COUNT(comment_id)::int AS comment_count
-            FROM reviews
-             LEFT JOIN comments
-              ON reviews.review_id = comments.review_id
+	     designer, review_img_url, category,
+	      reviews.created_at, reviews.votes,
+	       COUNT(comment_id)::int AS comment_count,
+		   COUNT(*) OVER()::int AS total_count
+	        FROM reviews
+	         LEFT JOIN comments
+	          ON reviews.review_id = comments.review_id
 			  ${catQueryStr}
 			  GROUP BY reviews.review_id
-                ORDER BY ${sort_by} ${order};`
+	            ORDER BY ${sort_by} ${order}
+				LIMIT $1 OFFSET $2;`,
+			queryArr
 		)
-
 		.then((result) => {
 			return result.rows;
 		});
