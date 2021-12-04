@@ -503,7 +503,7 @@ describe("POST /api/reviews/:review_id/comments", () => {
 			.send(newComment)
 			.expect(404)
 			.then(({ body: { msg } }) => {
-				expect(msg).toBe("review not found");
+				expect(msg).toBe("Not found");
 			});
 	});
 

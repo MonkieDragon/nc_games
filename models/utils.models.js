@@ -24,7 +24,7 @@ exports.reviewExists = (review_id) => {
 			if (rows.length === 0) {
 				return Promise.reject({
 					status: 404,
-					msg: `review not found`,
+					msg: `Not found`,
 				});
 			}
 		});
