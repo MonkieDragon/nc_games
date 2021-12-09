@@ -472,8 +472,6 @@ describe("GET /api/reviews/:review_id/comments", () => {
 					});
 			});
 	});
-
-	//////
 });
 
 describe("POST /api/reviews/:review_id/comments", () => {
