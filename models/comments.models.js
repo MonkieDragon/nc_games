@@ -11,6 +11,7 @@ exports.selectCommentsbyReviewId = (review_id, limit = 10, p = 0) => {
     body
     FROM comments
     WHERE review_id = $1
+	ORDER BY created_at ASC
 	LIMIT $2 OFFSET $3;`,
 			[review_id, limit, p]
 		)
